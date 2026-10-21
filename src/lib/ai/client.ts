@@ -3,7 +3,7 @@ import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/ge
 let genAIInstance: GoogleGenerativeAI | null = null;
 let cachedCredential: string | null = null;
 
-export const DEFAULT_MODEL = 'gemini-3.6-flash';
+export const DEFAULT_MODEL = 'gemini-3.8-flash';
 
 /**
  * Models that Google has shut down. If one is still pinned in a deployment's

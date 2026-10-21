@@ -41,7 +41,7 @@ export default defineConfig({
       env: {
         GEMINI_API_KEY: 'e2e-test-key',
         GEMINI_API_BASE_URL: `http://127.0.0.1:${MOCK_PORT}`,
-        GEMINI_MODEL: 'gemini-3.6-flash',
+        GEMINI_MODEL: 'gemini-3.8-flash',
       },
     },
   ],

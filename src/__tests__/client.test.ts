@@ -18,8 +18,8 @@ describe('resolveModelName', () => {
   });
 
   it('honours a supported configured model', () => {
-    process.env.GEMINI_MODEL = 'gemini-3.6-flash';
-    expect(resolveModelName()).toBe('gemini-3.6-flash');
+    process.env.GEMINI_MODEL = 'gemini-3.8-flash';
+    expect(resolveModelName()).toBe('gemini-3.8-flash');
   });
 
   it('migrates a retired 2.0 model instead of failing every request', () => {
