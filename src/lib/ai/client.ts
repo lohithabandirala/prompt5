@@ -8,7 +8,7 @@ import {
 let genAIInstance: GoogleGenerativeAI | null = null;
 let cachedCredential: string | null = null;
 
-export const DEFAULT_MODEL = 'gemini-3.8-flash';
+export const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
 
 /**
  * Models that Google has shut down. If one is still pinned in a deployment's
@@ -20,8 +20,6 @@ const RETIRED_MODEL_IDS = new Set([
   'gemini-2.0-flash-001',
   'gemini-2.0-flash-lite',
   'gemini-2.0-flash-lite-001',
-  'gemini-3.1-flash-lite',
-  'gemini-3.1-flash-lite-001',
 ]);
 
 export function resolveModelName(): string {
