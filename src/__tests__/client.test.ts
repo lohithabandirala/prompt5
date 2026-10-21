@@ -31,12 +31,8 @@ describe('resolveModelName', () => {
     expect(String(warn.mock.calls[0][0])).toContain('retired_model_configured');
   });
 
-  it('migrates a retired 3.1-flash-lite model', () => {
-    process.env.GEMINI_MODEL = 'gemini-3.1-flash-lite';
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-
-    expect(resolveModelName()).toBe(DEFAULT_MODEL);
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(String(warn.mock.calls[0][0])).toContain('retired_model_configured');
+  it('honours another supported model when explicitly configured', () => {
+    process.env.GEMINI_MODEL = 'gemini-3.5-flash';
+    expect(resolveModelName()).toBe('gemini-3.5-flash');
   });
 });
