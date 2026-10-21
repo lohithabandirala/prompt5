@@ -1,4 +1,9 @@
-import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/generative-ai';
+import {
+  GoogleGenerativeAI,
+  HarmBlockThreshold,
+  HarmCategory,
+  type GenerationConfig,
+} from '@google/generative-ai';
 
 let genAIInstance: GoogleGenerativeAI | null = null;
 let cachedCredential: string | null = null;
@@ -34,7 +39,19 @@ export function resolveModelName(): string {
 
   return configured;
 }
-export const MODEL_REQUEST_TIMEOUT_MS = 25_000;
+export const MODEL_REQUEST_TIMEOUT_MS = 50_000;
+
+/**
+ * Newer Flash models reason before producing structured output, which can
+ * exceed serverless request budgets. Structured plan generation does not need
+ * an extended reasoning pass, so request the minimum thinking budget.
+ */
+export const THINKING_CONFIG = { thinkingBudget: 0 } as const;
+
+/** The installed SDK's types predate Gemini 3 thinking controls. */
+export type FestivaGenerationConfig = GenerationConfig & {
+  thinkingConfig?: { thinkingBudget?: number; includeThoughts?: boolean };
+};
 
 /**
  * True when a server-side provider credential is available. Never expose the
@@ -65,6 +82,15 @@ export function getModel() {
   const baseUrl = process.env.GEMINI_API_BASE_URL?.trim();
   const modelName = resolveModelName();
 
+  const generationConfig: FestivaGenerationConfig = {
+    temperature: 0.7,
+    topP: 0.9,
+    topK: 40,
+    maxOutputTokens: 8192,
+    responseMimeType: 'application/json',
+    thinkingConfig: THINKING_CONFIG,
+  };
+
   return genAIInstance.getGenerativeModel(
     {
       model: modelName,
@@ -86,13 +112,7 @@ export function getModel() {
           threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
         },
       ],
-      generationConfig: {
-        temperature: 0.7,
-        topP: 0.9,
-        topK: 40,
-        maxOutputTokens: 8192,
-        responseMimeType: 'application/json',
-      },
+      generationConfig,
     },
     {
       timeout: MODEL_REQUEST_TIMEOUT_MS,

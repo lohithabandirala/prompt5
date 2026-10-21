@@ -134,6 +134,81 @@ Return JSON with exactly this structure:
 }`;
 }
 
+/**
+ * Core half of a full plan. Kept separate from the operational half so both
+ * requests can run in parallel and finish quickly.
+ */
+export function buildPlanCorePrompt(input: EventInput): string {
+  return `Create the overview, theme, budget and celebration ideas for the event in the data block below.
+
+${eventDataBlock(input)}
+
+${shortNoticeGuidance(input)}
+
+${categoryGuidance(input.category)}
+
+Personalisation requirements:
+- Base recommendations on the full combination of budget, guest count, style, venue preference, goals, traditions, dietary needs, accessibility needs, and location.
+- If the budget is tight, say which compromises you are making and why.
+- If preferences conflict, state the conflict in assumptions and propose a resolution.
+- Keep every string concise. Budget category names are also used by ideas.
+
+Return JSON with exactly this structure:
+{
+  "eventName": string,
+  "eventSummary": string (2-3 short paragraphs as one string),
+  "recommendedTheme": string,
+  "themeExplanation": string,
+  "decorationIdeas": string,
+  "venueIdeas": string,
+  "entertainmentSuggestions": string,
+  "foodConcepts": string,
+  "guestEngagement": string,
+  "budgetCategories": [
+    { "name": string, "description": string, "allocatedPercentage": number, "isContingency": boolean }
+  ] (4-10 categories, one contingency category, percentages summing to approximately 100),
+  "budgetAllocationRationale": string,
+  "celebrationIdeas": [
+    { "title": string, "description": string, "whyItFits": string, "expenseCategories": [string], "implementationSteps": [string], "estimatedCost": string, "tradeoffs": string }
+  ] (4-6 ideas; expenseCategories should use budget category names where possible)
+}`;
+}
+
+/**
+ * Operational half of a full plan: timeline, sourcing, run sheet and risks.
+ */
+export function buildPlanOperationsPrompt(input: EventInput): string {
+  return `Create the execution details for the event in the data block below.
+
+${eventDataBlock(input)}
+
+${shortNoticeGuidance(input)}
+
+${categoryGuidance(input.category)}
+
+Execution requirements:
+- Timeline tasks must be specific, ordered by when they are done, and use titles that dependency references can match.
+- Vendor categories are generic sourcing categories, never invented business names or contacts.
+- The run sheet must be chronological, non-overlapping per responsible person, and realistic for ${input.guestCount} guests.
+- Keep every string concise.
+
+Return JSON with exactly this structure:
+{
+  "timelineTasks": [
+    { "title": string, "description": string, "phase": string, "daysBeforeEvent": integer, "priority": "critical"|"high"|"medium"|"low", "dependsOn": [string] }
+  ] (8-16 tasks),
+  "vendorEntries": [
+    { "category": string, "importance": string, "daysBeforeEventDeadline": integer, "questionsToAsk": [string], "budgetRange": string, "requiredDeliverables": [string], "checklistItems": [string], "backupPlan": string }
+  ] (3-8 categories),
+  "eventDaySchedule": [
+    { "time": "HH:MM", "endTime": "HH:MM", "activity": string, "description": string, "responsible": string, "location": string }
+  ] (6-12 entries, chronological),
+  "contingencyPlans": [string],
+  "assumptions": [string],
+  "unresolvedQuestions": [string]
+}`;
+}
+
 const REGENERATION_INSTRUCTIONS: Record<RegenerateSection, string> = {
   ideas: `Return {"celebrationIdeas": [...]} with 4-6 NEW ideas that differ from the current ones.
 Each idea: {"title","description","whyItFits","expenseCategories":[string],"implementationSteps":[string],"estimatedCost","tradeoffs"}.`,

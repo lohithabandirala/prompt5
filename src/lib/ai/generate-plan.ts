@@ -1,7 +1,20 @@
-import { getModel } from './client';
-import { buildSystemPrompt, buildPlanPrompt, buildRegeneratePrompt } from './prompts';
+import type { GenerationConfig } from '@google/generative-ai';
+import {
+  getModel,
+  MODEL_REQUEST_TIMEOUT_MS,
+  THINKING_CONFIG,
+  type FestivaGenerationConfig,
+} from './client';
+import {
+  buildSystemPrompt,
+  buildPlanCorePrompt,
+  buildPlanOperationsPrompt,
+  buildRegeneratePrompt,
+} from './prompts';
 import {
   AIPlanResponseSchema,
+  AIPlanCoreSchema,
+  AIPlanOperationsSchema,
   RegenerateResultSchemas,
   type AIPlanResponse,
   type RegenerateSection,
@@ -11,6 +24,15 @@ import type { EventInput } from '../schemas/event-input';
 /** One retry for recoverable format failures. Never loops indefinitely. */
 const MAX_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 300;
+
+/**
+ * Leave a small margin below the route's 60s serverless limit for request
+ * parsing, plan assembly and the final response. A retry is only attempted
+ * when there is enough of this budget left for a meaningful second call.
+ */
+const GENERATION_BUDGET_MS = 55_000;
+const MIN_ATTEMPT_MS = 5_000;
+const MIN_RETRY_BUDGET_MS = 10_000;
 
 export type AIGenerationErrorCode =
   | 'NOT_CONFIGURED'
@@ -132,10 +154,14 @@ interface ModelCallOptions {
  * Call the model once, applying a hard timeout and separating the trusted
  * system instruction from untrusted user content.
  */
-async function callModel(userPrompt: string, options: ModelCallOptions = {}): Promise<string> {
+async function callModel(
+  userPrompt: string,
+  options: ModelCallOptions = {},
+  timeoutMs: number = MODEL_REQUEST_TIMEOUT_MS
+): Promise<string> {
   const model = getModel();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25_000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const result = await model.generateContent(
@@ -145,9 +171,10 @@ async function callModel(userPrompt: string, options: ModelCallOptions = {}): Pr
         generationConfig: {
           temperature: options.temperature ?? 0.7,
           responseMimeType: 'application/json',
-        },
+          thinkingConfig: THINKING_CONFIG,
+        } as FestivaGenerationConfig as GenerationConfig,
       },
-      { signal: controller.signal, timeout: 25_000 }
+      { signal: controller.signal, timeout: timeoutMs }
     );
 
     const text = result.response.text();
@@ -173,18 +200,29 @@ async function generateValidated<T>(
   options: ModelCallOptions = {}
 ): Promise<T> {
   let lastError: AIGenerationError | null = null;
+  const startedAt = Date.now();
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     if (attempt > 0) await delay(RETRY_DELAY_MS);
 
+    const remaining = GENERATION_BUDGET_MS - (Date.now() - startedAt);
+    if (remaining < MIN_ATTEMPT_MS) {
+      throw lastError ?? new AIGenerationError(
+        'The AI request ran out of time. Please try again.',
+        'TIMEOUT',
+        false
+      );
+    }
+
     let text: string;
     try {
-      text = await callModel(prompt, options);
+      text = await callModel(prompt, options, Math.min(MODEL_REQUEST_TIMEOUT_MS, remaining));
     } catch (error) {
       if (
         error instanceof AIGenerationError &&
         error.retryable &&
-        attempt < MAX_ATTEMPTS - 1
+        attempt < MAX_ATTEMPTS - 1 &&
+        GENERATION_BUDGET_MS - (Date.now() - startedAt) > MIN_RETRY_BUDGET_MS
       ) {
         lastError = error;
         continue;
@@ -229,7 +267,29 @@ async function generateValidated<T>(
  * Throws AIGenerationError on any failure — there is no fabricated fallback.
  */
 export async function generateEventPlan(input: EventInput): Promise<AIPlanResponse> {
-  return generateValidated(buildPlanPrompt(input), AIPlanResponseSchema);
+  // Wait for both halves even if one fails so no provider request is left
+  // running after the API has already returned an error.
+  const [coreResult, operationsResult] = await Promise.allSettled([
+    generateValidated(buildPlanCorePrompt(input), AIPlanCoreSchema),
+    generateValidated(buildPlanOperationsPrompt(input), AIPlanOperationsSchema),
+  ]);
+
+  if (coreResult.status === 'rejected') throw coreResult.reason;
+  if (operationsResult.status === 'rejected') throw operationsResult.reason;
+
+  const merged = AIPlanResponseSchema.safeParse({
+    ...coreResult.value,
+    ...operationsResult.value,
+  });
+  if (!merged.success) {
+    throw new AIGenerationError(
+      'The AI response did not match the required plan format. Please try again.',
+      'SCHEMA_VALIDATION_FAILED',
+      true
+    );
+  }
+
+  return merged.data;
 }
 
 /**

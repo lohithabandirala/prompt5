@@ -240,6 +240,38 @@ export const AIPlanResponseSchema = z.object({
 
 export type AIPlanResponse = z.infer<typeof AIPlanResponseSchema>;
 
+/**
+ * The plan is generated as two independent halves in parallel. Smaller
+ * responses finish well inside the serverless budget, and a malformed half can
+ * be retried without discarding the other half.
+ */
+export const AIPlanCoreSchema = AIPlanResponseSchema.pick({
+  eventName: true,
+  eventSummary: true,
+  recommendedTheme: true,
+  themeExplanation: true,
+  decorationIdeas: true,
+  venueIdeas: true,
+  entertainmentSuggestions: true,
+  foodConcepts: true,
+  guestEngagement: true,
+  budgetCategories: true,
+  budgetAllocationRationale: true,
+  celebrationIdeas: true,
+});
+
+export const AIPlanOperationsSchema = AIPlanResponseSchema.pick({
+  timelineTasks: true,
+  vendorEntries: true,
+  eventDaySchedule: true,
+  contingencyPlans: true,
+  assumptions: true,
+  unresolvedQuestions: true,
+});
+
+export type AIPlanCore = z.infer<typeof AIPlanCoreSchema>;
+export type AIPlanOperations = z.infer<typeof AIPlanOperationsSchema>;
+
 // ── Partial regeneration schemas ───────────────────────────────
 export const RegenerateSectionSchema = z.enum([
   'ideas',

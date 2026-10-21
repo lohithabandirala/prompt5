@@ -11,6 +11,7 @@ jest.mock('@/lib/ai/client', () => ({
   isAiConfigured: jest.fn(() => true),
   DEFAULT_MODEL: 'test-model',
   MODEL_REQUEST_TIMEOUT_MS: 25_000,
+  THINKING_CONFIG: { thinkingBudget: 0 },
 }));
 
 const mockGetModel = getModel as jest.Mock;
@@ -46,17 +47,17 @@ describe('generateEventPlan', () => {
     const plan = await generateEventPlan(validInput());
     expect(plan.eventName).toBe('A Garden Romance Wedding');
     expect(plan.budgetCategories).toHaveLength(5);
-    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(generateContent).toHaveBeenCalledTimes(2);
   });
 
   it('retries once when the model returns invalid JSON, then succeeds', async () => {
     generateContent
       .mockResolvedValueOnce(ok('this is not json'))
-      .mockResolvedValueOnce(ok(JSON.stringify(validAIPlan())));
+      .mockResolvedValue(ok(JSON.stringify(validAIPlan())));
 
     const plan = await generateEventPlan(validInput());
     expect(plan.eventName).toBeTruthy();
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(3);
   });
 
   it('fails with INVALID_JSON after the bounded retry', async () => {
@@ -65,7 +66,7 @@ describe('generateEventPlan', () => {
     await expect(generateEventPlan(validInput())).rejects.toMatchObject({
       code: 'INVALID_JSON',
     });
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
   it('fails with SCHEMA_VALIDATION_FAILED when the shape is wrong', async () => {
@@ -74,7 +75,7 @@ describe('generateEventPlan', () => {
     await expect(generateEventPlan(validInput())).rejects.toMatchObject({
       code: 'SCHEMA_VALIDATION_FAILED',
     });
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
   it('maps rate limiting and retries once', async () => {
@@ -84,7 +85,7 @@ describe('generateEventPlan', () => {
       code: 'RATE_LIMITED',
       retryable: true,
     });
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
   it('maps authentication failures without retrying', async () => {
@@ -94,7 +95,7 @@ describe('generateEventPlan', () => {
       code: 'AUTH_FAILED',
       retryable: false,
     });
-    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(generateContent).toHaveBeenCalledTimes(2);
   });
 
   it('maps a retired or unknown model to an actionable configuration error', async () => {
@@ -108,7 +109,7 @@ describe('generateEventPlan', () => {
       code: 'MODEL_UNAVAILABLE',
       retryable: false,
     });
-    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(generateContent).toHaveBeenCalledTimes(2);
   });
 
   it('maps provider 500 errors and retries once', async () => {
@@ -117,7 +118,7 @@ describe('generateEventPlan', () => {
     await expect(generateEventPlan(validInput())).rejects.toMatchObject({
       code: 'UNAVAILABLE',
     });
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
   it('does not mistake a port in the provider URL for an auth status', async () => {
@@ -131,14 +132,14 @@ describe('generateEventPlan', () => {
       code: 'UNAVAILABLE',
       retryable: true,
     });
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
   it('maps timeouts', async () => {
     generateContent.mockRejectedValue(new Error('Request timeout'));
 
     await expect(generateEventPlan(validInput())).rejects.toMatchObject({ code: 'TIMEOUT' });
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
   it('fails on an empty response without inventing content', async () => {
@@ -147,7 +148,7 @@ describe('generateEventPlan', () => {
     await expect(generateEventPlan(validInput())).rejects.toMatchObject({
       code: 'EMPTY_RESPONSE',
     });
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
   it('never includes raw provider diagnostics in the surfaced message', async () => {
