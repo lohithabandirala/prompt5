@@ -4,6 +4,36 @@ let genAIInstance: GoogleGenerativeAI | null = null;
 let cachedCredential: string | null = null;
 
 export const DEFAULT_MODEL = 'gemini-3.6-flash';
+
+/**
+ * Models that Google has shut down. If one is still pinned in a deployment's
+ * environment, fall back to the current default rather than failing every
+ * generation with a provider 404. The override is logged for operators.
+ */
+const RETIRED_MODEL_IDS = new Set([
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-001',
+  'gemini-2.0-flash-lite',
+  'gemini-2.0-flash-lite-001',
+]);
+
+export function resolveModelName(): string {
+  const configured = process.env.GEMINI_MODEL?.trim();
+  if (!configured) return DEFAULT_MODEL;
+
+  if (RETIRED_MODEL_IDS.has(configured)) {
+    console.warn(
+      JSON.stringify({
+        event: 'retired_model_configured',
+        configured,
+        using: DEFAULT_MODEL,
+      })
+    );
+    return DEFAULT_MODEL;
+  }
+
+  return configured;
+}
 export const MODEL_REQUEST_TIMEOUT_MS = 25_000;
 
 /**
@@ -33,7 +63,7 @@ export function getModel() {
   }
 
   const baseUrl = process.env.GEMINI_API_BASE_URL?.trim();
-  const modelName = process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
+  const modelName = resolveModelName();
 
   return genAIInstance.getGenerativeModel(
     {

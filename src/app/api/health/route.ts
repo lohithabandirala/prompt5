@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAiConfigured, DEFAULT_MODEL } from '@/lib/ai/client';
+import { isAiConfigured, resolveModelName } from '@/lib/ai/client';
 
 /**
  * Public capability probe. Exposes only whether a server credential exists —
@@ -10,7 +10,7 @@ export function GET() {
     {
       status: 'ok',
       aiConfigured: isAiConfigured(),
-      model: process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL,
+      model: resolveModelName(),
     },
     {
       headers: {

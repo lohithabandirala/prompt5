@@ -75,7 +75,7 @@ npx playwright install chromium
 | Name | Required | Purpose |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | Yes | Server-side Gemini credential. Never exposed to the browser. |
-| `GEMINI_MODEL` | No | Model identifier. Defaults to `gemini-3.6-flash`. |
+| `GEMINI_MODEL` | No | Model identifier. Defaults to `gemini-3.6-flash`. Retired 2.0 Flash IDs are migrated to the default and logged. |
 | `GEMINI_API_BASE_URL` | No | Approved gateway/proxy base URL. Also used by Playwright to point the real API routes at a local deterministic mock. |
 
 `.env.example` documents the same variables. `.env*` files other than `.env.example` are git-ignored.
