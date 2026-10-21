@@ -23,7 +23,7 @@ import type { EventInput } from '../schemas/event-input';
 
 /** One retry for recoverable format failures. Never loops indefinitely. */
 const MAX_ATTEMPTS = 2;
-const RETRY_DELAY_MS = 300;
+const RETRY_BASE_DELAY_MS = 1_000;
 
 /**
  * Leave a small margin below the route's 60s serverless limit for request
@@ -203,7 +203,7 @@ async function generateValidated<T>(
   const startedAt = Date.now();
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-    if (attempt > 0) await delay(RETRY_DELAY_MS);
+    if (attempt > 0) await delay(RETRY_BASE_DELAY_MS * Math.pow(3, attempt - 1));
 
     const remaining = GENERATION_BUDGET_MS - (Date.now() - startedAt);
     if (remaining < MIN_ATTEMPT_MS) {
@@ -267,19 +267,14 @@ async function generateValidated<T>(
  * Throws AIGenerationError on any failure — there is no fabricated fallback.
  */
 export async function generateEventPlan(input: EventInput): Promise<AIPlanResponse> {
-  // Wait for both halves even if one fails so no provider request is left
-  // running after the API has already returned an error.
-  const [coreResult, operationsResult] = await Promise.allSettled([
-    generateValidated(buildPlanCorePrompt(input), AIPlanCoreSchema),
-    generateValidated(buildPlanOperationsPrompt(input), AIPlanOperationsSchema),
-  ]);
-
-  if (coreResult.status === 'rejected') throw coreResult.reason;
-  if (operationsResult.status === 'rejected') throw operationsResult.reason;
+  // Sequential calls to avoid doubling rate pressure on the provider.
+  // Free-tier and low-quota keys are easily exhausted by parallel requests.
+  const coreValue = await generateValidated(buildPlanCorePrompt(input), AIPlanCoreSchema);
+  const operationsValue = await generateValidated(buildPlanOperationsPrompt(input), AIPlanOperationsSchema);
 
   const merged = AIPlanResponseSchema.safeParse({
-    ...coreResult.value,
-    ...operationsResult.value,
+    ...coreValue,
+    ...operationsValue,
   });
   if (!merged.success) {
     throw new AIGenerationError(
