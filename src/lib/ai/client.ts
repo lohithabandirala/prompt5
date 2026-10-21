@@ -3,7 +3,7 @@ import { GoogleGenerativeAI, HarmBlockThreshold, HarmCategory } from '@google/ge
 let genAIInstance: GoogleGenerativeAI | null = null;
 let cachedCredential: string | null = null;
 
-export const DEFAULT_MODEL = 'gemini-2.0-flash';
+export const DEFAULT_MODEL = 'gemini-3.6-flash';
 export const MODEL_REQUEST_TIMEOUT_MS = 25_000;
 
 /**

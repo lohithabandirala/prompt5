@@ -14,6 +14,7 @@ const RETRY_DELAY_MS = 300;
 
 export type AIGenerationErrorCode =
   | 'NOT_CONFIGURED'
+  | 'MODEL_UNAVAILABLE'
   | 'TIMEOUT'
   | 'RATE_LIMITED'
   | 'AUTH_FAILED'
@@ -80,6 +81,20 @@ function mapProviderError(error: unknown): AIGenerationError {
       'The AI service is busy right now. Please wait a moment and try again.',
       'RATE_LIMITED',
       true
+    );
+  }
+  if (
+    status === 404 ||
+    (lower.includes('model') &&
+      (lower.includes('not found') ||
+        lower.includes('not supported') ||
+        lower.includes('deprecated') ||
+        lower.includes('no longer available')))
+  ) {
+    return new AIGenerationError(
+      'The configured AI model is unavailable. Update GEMINI_MODEL to a supported model and redeploy.',
+      'MODEL_UNAVAILABLE',
+      false
     );
   }
   if (

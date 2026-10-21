@@ -49,6 +49,7 @@ export function toErrorResponse(error: unknown): NextResponse {
   if (error instanceof AIGenerationError) {
     const statusByCode: Record<string, number> = {
       NOT_CONFIGURED: 503,
+      MODEL_UNAVAILABLE: 503,
       AUTH_FAILED: 503,
       RATE_LIMITED: 429,
       TIMEOUT: 504,

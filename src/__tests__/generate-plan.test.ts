@@ -97,6 +97,20 @@ describe('generateEventPlan', () => {
     expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
+  it('maps a retired or unknown model to an actionable configuration error', async () => {
+    generateContent.mockRejectedValue(
+      new Error(
+        '[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent: [404 Not Found] models/gemini-2.0-flash is not found'
+      )
+    );
+
+    await expect(generateEventPlan(validInput())).rejects.toMatchObject({
+      code: 'MODEL_UNAVAILABLE',
+      retryable: false,
+    });
+    expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+
   it('maps provider 500 errors and retries once', async () => {
     generateContent.mockRejectedValue(new Error('500 Internal Server Error'));
 
