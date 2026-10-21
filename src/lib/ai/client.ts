@@ -8,7 +8,7 @@ import {
 let genAIInstance: GoogleGenerativeAI | null = null;
 let cachedCredential: string | null = null;
 
-export const DEFAULT_MODEL = 'gemini-3.8-flash';
+export const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
 
 /**
  * Models that Google has shut down. If one is still pinned in a deployment's
