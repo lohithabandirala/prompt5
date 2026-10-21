@@ -1,9 +1,10 @@
 import { z } from 'zod';
+import { EventInputSchema } from './event-input';
 
 // ── Budget Category Schema ─────────────────────────────────────
 export const BudgetCategorySchema = z.object({
-  id: z.string(),
-  name: z.string().max(100),
+  id: z.string().min(1).max(120),
+  name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   allocatedPercentage: z.number().min(0).max(100),
   allocatedAmount: z.number().min(0),
@@ -24,15 +25,15 @@ export const TaskStatus = z.enum(['not_started', 'in_progress', 'completed']);
 export type TaskStatus = z.infer<typeof TaskStatus>;
 
 export const TimelineTaskSchema = z.object({
-  id: z.string(),
-  title: z.string().max(200),
+  id: z.string().min(1).max(120),
+  title: z.string().min(1).max(200),
   description: z.string().max(500).optional(),
-  phase: z.string().max(100),
-  daysBeforeEvent: z.number().int(),
-  dueDate: z.string().optional(), // ISO date string, calculated
+  phase: z.string().min(1).max(100),
+  daysBeforeEvent: z.number().int().min(0).max(3650),
+  dueDate: z.string().max(20).optional(),
   priority: TaskPriority,
   status: TaskStatus.default('not_started'),
-  dependsOn: z.array(z.string()).optional(),
+  dependsOn: z.array(z.string().max(120)).max(20).optional(),
   assignee: z.string().max(100).optional(),
   notes: z.string().max(500).optional(),
 });
@@ -49,18 +50,20 @@ export const VendorStatus = z.enum([
 ]);
 export type VendorStatus = z.infer<typeof VendorStatus>;
 
+export const VendorChecklistItemSchema = z.object({
+  item: z.string().min(1).max(300),
+  completed: z.boolean().default(false),
+});
+
 export const VendorEntrySchema = z.object({
-  id: z.string(),
-  category: z.string().max(100),
-  importance: z.string().max(200).optional(),
-  sourcingDeadline: z.string().optional(),
-  questionsToAsk: z.array(z.string().max(300)).optional(),
+  id: z.string().min(1).max(120),
+  category: z.string().min(1).max(100),
+  importance: z.string().max(300).optional(),
+  sourcingDeadline: z.string().max(20).optional(),
+  questionsToAsk: z.array(z.string().max(300)).max(30).optional(),
   budgetRange: z.string().max(200).optional(),
-  requiredDeliverables: z.array(z.string().max(300)).optional(),
-  checklist: z.array(z.object({
-    item: z.string().max(300),
-    completed: z.boolean().default(false),
-  })).optional(),
+  requiredDeliverables: z.array(z.string().max(300)).max(30).optional(),
+  checklist: z.array(VendorChecklistItemSchema).max(30).optional(),
   status: VendorStatus.default('researching'),
   vendorName: z.string().max(200).optional(),
   vendorContact: z.string().max(200).optional(),
@@ -72,12 +75,12 @@ export type VendorEntry = z.infer<typeof VendorEntrySchema>;
 
 // ── Celebration Idea Schema ────────────────────────────────────
 export const CelebrationIdeaSchema = z.object({
-  id: z.string(),
-  title: z.string().max(200),
-  description: z.string().max(1000),
+  id: z.string().min(1).max(120),
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(1000),
   whyItFits: z.string().max(500),
-  expenseCategories: z.array(z.string().max(100)).optional(),
-  implementationSteps: z.array(z.string().max(300)).optional(),
+  expenseCategories: z.array(z.string().max(100)).max(10).optional(),
+  implementationSteps: z.array(z.string().max(300)).max(15).optional(),
   estimatedCost: z.string().max(200).optional(),
   tradeoffs: z.string().max(500).optional(),
   saved: z.boolean().default(false),
@@ -86,10 +89,10 @@ export type CelebrationIdea = z.infer<typeof CelebrationIdeaSchema>;
 
 // ── Event Day Schedule Entry ───────────────────────────────────
 export const ScheduleEntrySchema = z.object({
-  id: z.string(),
+  id: z.string().min(1).max(120),
   time: z.string().max(20),
   endTime: z.string().max(20).optional(),
-  activity: z.string().max(200),
+  activity: z.string().min(1).max(200),
   description: z.string().max(500).optional(),
   responsible: z.string().max(200).optional(),
   location: z.string().max(200).optional(),
@@ -99,16 +102,16 @@ export type ScheduleEntry = z.infer<typeof ScheduleEntrySchema>;
 
 // ── Full Event Plan Schema ─────────────────────────────────────
 export const EventPlanSchema = z.object({
-  id: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+  id: z.string().min(1).max(120),
+  createdAt: z.string().max(40),
+  updatedAt: z.string().max(40),
 
   // Event overview
-  eventName: z.string().max(200),
-  eventSummary: z.string().max(2000),
+  eventName: z.string().min(1).max(200),
+  eventSummary: z.string().min(1).max(2000),
 
   // Theme & ideas
-  recommendedTheme: z.string().max(500),
+  recommendedTheme: z.string().min(1).max(500),
   themeExplanation: z.string().max(1000),
   decorationIdeas: z.string().max(1000).optional(),
   venueIdeas: z.string().max(1000).optional(),
@@ -117,102 +120,122 @@ export const EventPlanSchema = z.object({
   guestEngagement: z.string().max(1000).optional(),
 
   // Budget
-  budgetCategories: z.array(BudgetCategorySchema),
+  budgetCategories: z.array(BudgetCategorySchema).min(1).max(20),
   budgetAllocationRationale: z.string().max(1000).optional(),
 
   // Timeline
-  timelineTasks: z.array(TimelineTaskSchema),
+  timelineTasks: z.array(TimelineTaskSchema).min(1).max(80),
 
   // Vendors
-  vendorEntries: z.array(VendorEntrySchema),
+  vendorEntries: z.array(VendorEntrySchema).min(1).max(30),
 
   // Ideas
-  celebrationIdeas: z.array(CelebrationIdeaSchema),
+  celebrationIdeas: z.array(CelebrationIdeaSchema).min(1).max(15),
 
   // Event day schedule
-  eventDaySchedule: z.array(ScheduleEntrySchema),
+  eventDaySchedule: z.array(ScheduleEntrySchema).min(1).max(50),
 
   // Risks & assumptions
-  contingencyPlans: z.array(z.string().max(500)).optional(),
-  assumptions: z.array(z.string().max(500)).optional(),
-  unresolvedQuestions: z.array(z.string().max(500)).optional(),
+  contingencyPlans: z.array(z.string().max(500)).max(20).optional(),
+  assumptions: z.array(z.string().max(500)).max(20).optional(),
+  unresolvedQuestions: z.array(z.string().max(500)).max(20).optional(),
 });
 
 export type EventPlan = z.infer<typeof EventPlanSchema>;
 
 // ── Saved Event (includes input + plan) ────────────────────────
 export const SavedEventSchema = z.object({
-  id: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  input: z.any(), // EventInput
+  id: z.string().min(1).max(120),
+  createdAt: z.string().max(40),
+  updatedAt: z.string().max(40),
+  input: EventInputSchema,
   plan: EventPlanSchema.optional(),
-  userEdits: z.record(z.string(), z.unknown()).optional(),
 });
 export type SavedEvent = z.infer<typeof SavedEventSchema>;
 
-// ── AI Response Schema (what we expect from the model) ─────────
+// ── AI response schemas (untrusted model output) ───────────────
+const AIBudgetCategorySchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().max(500).optional(),
+  allocatedPercentage: z.number().min(0).max(100),
+  isContingency: z.boolean().optional(),
+});
+
+const AITimelineTaskSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(500).optional(),
+  phase: z.string().min(1).max(100),
+  daysBeforeEvent: z.number().min(0).max(3650),
+  priority: z.enum(['critical', 'high', 'medium', 'low']),
+  dependsOn: z.array(z.string().max(200)).max(10).optional(),
+});
+
+const AIVendorEntrySchema = z.object({
+  category: z.string().min(1).max(100),
+  importance: z.string().max(300).optional(),
+  daysBeforeEventDeadline: z.number().min(0).max(3650).optional(),
+  questionsToAsk: z.array(z.string().max(300)).max(20).optional(),
+  budgetRange: z.string().max(200).optional(),
+  requiredDeliverables: z.array(z.string().max(300)).max(20).optional(),
+  checklistItems: z.array(z.string().max(300)).max(20).optional(),
+  backupPlan: z.string().max(500).optional(),
+});
+
+const AICelebrationIdeaSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().min(1).max(1000),
+  whyItFits: z.string().max(500),
+  expenseCategories: z.array(z.string().max(100)).max(10).optional(),
+  implementationSteps: z.array(z.string().max(300)).max(10).optional(),
+  estimatedCost: z.string().max(200).optional(),
+  tradeoffs: z.string().max(500).optional(),
+});
+
+const AIScheduleEntrySchema = z.object({
+  time: z.string().min(1).max(20),
+  endTime: z.string().max(20).optional(),
+  activity: z.string().min(1).max(200),
+  description: z.string().max(500).optional(),
+  responsible: z.string().max(200).optional(),
+  location: z.string().max(200).optional(),
+});
+
+const AThemeSchema = z.object({
+  eventName: z.string().min(1).max(200),
+  recommendedTheme: z.string().min(1).max(500),
+  themeExplanation: z.string().min(1).max(1000),
+  decorationIdeas: z.string().max(1000).optional(),
+  venueIdeas: z.string().max(1000).optional(),
+  entertainmentSuggestions: z.string().max(1000).optional(),
+  foodConcepts: z.string().max(1000).optional(),
+  guestEngagement: z.string().max(1000).optional(),
+});
+
 export const AIPlanResponseSchema = z.object({
-  eventName: z.string(),
-  eventSummary: z.string(),
-  recommendedTheme: z.string(),
-  themeExplanation: z.string(),
-  decorationIdeas: z.string().optional(),
-  venueIdeas: z.string().optional(),
-  entertainmentSuggestions: z.string().optional(),
-  foodConcepts: z.string().optional(),
-  guestEngagement: z.string().optional(),
+  eventName: z.string().min(1).max(200),
+  eventSummary: z.string().min(1).max(2000),
+  recommendedTheme: z.string().min(1).max(500),
+  themeExplanation: z.string().min(1).max(1000),
+  decorationIdeas: z.string().max(1000).optional(),
+  venueIdeas: z.string().max(1000).optional(),
+  entertainmentSuggestions: z.string().max(1000).optional(),
+  foodConcepts: z.string().max(1000).optional(),
+  guestEngagement: z.string().max(1000).optional(),
 
-  budgetCategories: z.array(z.object({
-    name: z.string(),
-    description: z.string().optional(),
-    allocatedPercentage: z.number(),
-    isContingency: z.boolean().optional(),
-  })),
-  budgetAllocationRationale: z.string().optional(),
+  budgetCategories: z.array(AIBudgetCategorySchema).min(1).max(20),
+  budgetAllocationRationale: z.string().max(1000).optional(),
 
-  timelineTasks: z.array(z.object({
-    title: z.string(),
-    description: z.string().optional(),
-    phase: z.string(),
-    daysBeforeEvent: z.number(),
-    priority: z.enum(['critical', 'high', 'medium', 'low']),
-    dependsOn: z.array(z.string()).optional(),
-  })),
+  timelineTasks: z.array(AITimelineTaskSchema).min(1).max(60),
 
-  vendorEntries: z.array(z.object({
-    category: z.string(),
-    importance: z.string().optional(),
-    daysBeforeEventDeadline: z.number().optional(),
-    questionsToAsk: z.array(z.string()).optional(),
-    budgetRange: z.string().optional(),
-    requiredDeliverables: z.array(z.string()).optional(),
-    checklistItems: z.array(z.string()).optional(),
-    backupPlan: z.string().optional(),
-  })),
+  vendorEntries: z.array(AIVendorEntrySchema).min(1).max(25),
 
-  celebrationIdeas: z.array(z.object({
-    title: z.string(),
-    description: z.string(),
-    whyItFits: z.string(),
-    expenseCategories: z.array(z.string()).optional(),
-    implementationSteps: z.array(z.string()).optional(),
-    estimatedCost: z.string().optional(),
-    tradeoffs: z.string().optional(),
-  })),
+  celebrationIdeas: z.array(AICelebrationIdeaSchema).min(1).max(12),
 
-  eventDaySchedule: z.array(z.object({
-    time: z.string(),
-    endTime: z.string().optional(),
-    activity: z.string(),
-    description: z.string().optional(),
-    responsible: z.string().optional(),
-    location: z.string().optional(),
-  })),
+  eventDaySchedule: z.array(AIScheduleEntrySchema).min(1).max(40),
 
-  contingencyPlans: z.array(z.string()).optional(),
-  assumptions: z.array(z.string()).optional(),
-  unresolvedQuestions: z.array(z.string()).optional(),
+  contingencyPlans: z.array(z.string().max(500)).max(20).optional(),
+  assumptions: z.array(z.string().max(500)).max(20).optional(),
+  unresolvedQuestions: z.array(z.string().max(500)).max(20).optional(),
 });
 
 export type AIPlanResponse = z.infer<typeof AIPlanResponseSchema>;
@@ -227,3 +250,35 @@ export const RegenerateSectionSchema = z.enum([
   'theme',
 ]);
 export type RegenerateSection = z.infer<typeof RegenerateSectionSchema>;
+
+export const RegenerateResultSchemas = {
+  ideas: z.object({
+    celebrationIdeas: z.array(AICelebrationIdeaSchema).min(1).max(8),
+  }),
+  budget: z.object({
+    budgetCategories: z.array(AIBudgetCategorySchema).min(1).max(20),
+    budgetAllocationRationale: z.string().max(1000).optional(),
+  }),
+  timeline: z.object({
+    timelineTasks: z.array(AITimelineTaskSchema).min(1).max(40),
+  }),
+  vendors: z.object({
+    vendorEntries: z.array(AIVendorEntrySchema).min(1).max(20),
+  }),
+  schedule: z.object({
+    eventDaySchedule: z.array(AIScheduleEntrySchema).min(1).max(30),
+  }),
+  theme: AThemeSchema,
+} as const;
+
+export type RegenerateResults = {
+  [K in RegenerateSection]: z.infer<(typeof RegenerateResultSchemas)[K]>;
+};
+
+export type RegenerateResponse =
+  | { section: 'ideas'; result: RegenerateResults['ideas'] }
+  | { section: 'budget'; result: RegenerateResults['budget'] }
+  | { section: 'timeline'; result: RegenerateResults['timeline'] }
+  | { section: 'vendors'; result: RegenerateResults['vendors'] }
+  | { section: 'schedule'; result: RegenerateResults['schedule'] }
+  | { section: 'theme'; result: RegenerateResults['theme'] };
