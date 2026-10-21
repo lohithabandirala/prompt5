@@ -146,7 +146,7 @@ describe('POST /api/plan', () => {
 
   it('enforces the per-client rate limit', async () => {
     const ip = '203.0.113.9';
-    for (let index = 0; index < 5; index += 1) {
+    for (let index = 0; index < 10; index += 1) {
       const response = await POST(makeRequest('{bad json', ip));
       expect(response.status).toBe(400);
     }
