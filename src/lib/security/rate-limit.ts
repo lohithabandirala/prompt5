@@ -15,7 +15,7 @@ interface RateLimitEntry {
 const store = new Map<string, RateLimitEntry>();
 
 const DEFAULT_WINDOW_MS = 60_000;
-const DEFAULT_MAX_REQUESTS = 10;
+const DEFAULT_MAX_REQUESTS = 20;
 const CLEANUP_INTERVAL_MS = 5 * 60_000;
 
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;

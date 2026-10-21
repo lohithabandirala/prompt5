@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   const startedAt = Date.now();
 
   try {
-    const rateCheck = checkRateLimit(getClientIdentifier(request.headers), 5, 60_000);
+    const rateCheck = checkRateLimit(getClientIdentifier(request.headers), 10, 60_000);
     if (!rateCheck.allowed) {
       return jsonError(
         'Too many plan requests. Please wait a minute and try again.',
